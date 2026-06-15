@@ -159,7 +159,7 @@ const Index = () => {
 
             {/* Cart */}
             <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
+              <div className="rounded-3xl border border-border bg-white p-6 shadow-soft">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="font-display text-xl font-extrabold">Чек</h2>
                   <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-secondary-foreground">
@@ -216,9 +216,9 @@ const Index = () => {
                       key={pm.id}
                       onClick={pay}
                       disabled={!total}
-                      className={`flex flex-col items-center gap-1 rounded-2xl p-3 text-white transition-all disabled:opacity-40 ${pm.color} hover:opacity-90 active:scale-95`}
+                      className="flex flex-col items-center gap-1 rounded-2xl border-2 border-yellow-400 bg-white p-3 text-foreground transition-all disabled:opacity-40 hover:bg-yellow-50 active:scale-95 shadow-sm"
                     >
-                      <Icon name={pm.icon} size={20} />
+                      <Icon name={pm.icon} className="text-yellow-500" size={20} />
                       <span className="text-[11px] font-bold">{pm.name}</span>
                     </button>
                   ))}
@@ -327,37 +327,114 @@ const Products = () => (
 );
 
 const Settings = () => {
-  const rows = [
+  const [rows, setRows] = useState([
     { icon: 'CreditCard', name: 'Эквайринг (карты)', desc: 'Приём оплаты картой', on: true },
     { icon: 'Smartphone', name: 'СБП', desc: 'Система быстрых платежей', on: true },
     { icon: 'Banknote', name: 'Наличные', desc: 'Расчёт наличными', on: true },
     { icon: 'Printer', name: 'Печать чеков', desc: 'Фискальный регистратор', on: false },
-  ];
+  ]);
+  const [callDone, setCallDone] = useState(false);
+  const [newPayment, setNewPayment] = useState('');
+  const [showNewPayment, setShowNewPayment] = useState(false);
+
+  const callStaff = () => {
+    setCallDone(true);
+    setTimeout(() => setCallDone(false), 3000);
+  };
+
+  const addPaymentType = () => {
+    if (!newPayment.trim()) return;
+    setRows((r) => [...r, { icon: 'CirclePlus', name: newPayment, desc: 'Новый тип оплаты', on: true }]);
+    setNewPayment('');
+    setShowNewPayment(false);
+  };
+
   return (
     <div className="max-w-2xl">
       <h1 className="font-display mb-6 text-3xl font-black">Настройки</h1>
+
+      {/* Action buttons */}
+      <p className="mb-3 text-sm font-semibold text-muted-foreground">Действия</p>
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <button
+          onClick={callStaff}
+          className={`flex items-center gap-3 rounded-2xl border-2 p-4 font-semibold transition-all active:scale-95 ${
+            callDone
+              ? 'border-green-400 bg-green-50 text-green-700'
+              : 'border-yellow-400 bg-white hover:bg-yellow-50 text-foreground'
+          }`}
+        >
+          <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${callDone ? 'bg-green-400' : 'gradient-brand'}`}>
+            <Icon name={callDone ? 'CheckCircle2' : 'Bell'} className="text-white" size={20} />
+          </span>
+          <span className="text-sm">{callDone ? 'Вызов отправлен!' : 'Вызвать сотрудника'}</span>
+        </button>
+
+        <button
+          onClick={() => setShowNewPayment((v) => !v)}
+          className="flex items-center gap-3 rounded-2xl border-2 border-yellow-400 bg-white p-4 font-semibold hover:bg-yellow-50 active:scale-95 transition-all"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl gradient-brand">
+            <Icon name="PlusCircle" className="text-white" size={20} />
+          </span>
+          <span className="text-sm">Создать тип оплаты</span>
+        </button>
+
+        <button
+          onClick={() => {}}
+          className="flex items-center gap-3 rounded-2xl border-2 border-red-300 bg-white p-4 font-semibold hover:bg-red-50 active:scale-95 transition-all text-red-600"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500">
+            <Icon name="Trash2" className="text-white" size={20} />
+          </span>
+          <span className="text-sm">Удалить все товары</span>
+        </button>
+      </div>
+
+      {showNewPayment && (
+        <div className="mb-6 animate-float-up rounded-3xl border border-yellow-300 bg-yellow-50 p-4">
+          <p className="mb-2 text-sm font-bold">Название нового типа оплаты</p>
+          <div className="flex gap-2">
+            <input
+              value={newPayment}
+              onChange={(e) => setNewPayment(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addPaymentType()}
+              placeholder="Например: QR-код"
+              className="flex-1 rounded-2xl border border-border bg-white px-4 py-2 text-sm outline-none focus:border-yellow-400"
+            />
+            <button
+              onClick={addPaymentType}
+              className="rounded-2xl gradient-brand px-4 py-2 text-sm font-bold text-foreground"
+            >
+              Добавить
+            </button>
+          </div>
+        </div>
+      )}
+
       <p className="mb-3 text-sm font-semibold text-muted-foreground">Платёжные системы</p>
       <div className="space-y-3">
         {rows.map((r, i) => (
           <div
             key={r.name}
             style={{ animationDelay: `${i * 50}ms` }}
-            className="flex animate-float-up items-center gap-4 rounded-3xl border border-border bg-card p-4 shadow-soft"
+            className="flex animate-float-up items-center gap-4 rounded-3xl border border-border bg-white p-4 shadow-soft"
           >
-            <span className="grid h-11 w-11 place-items-center rounded-2xl gradient-brand text-white">
-              <Icon name={r.icon} size={20} />
+            <span className="grid h-11 w-11 place-items-center rounded-2xl gradient-brand">
+              <Icon name={r.icon} className="text-white" size={20} />
             </span>
             <div className="flex-1">
               <p className="font-display font-bold">{r.name}</p>
               <p className="text-sm text-muted-foreground">{r.desc}</p>
             </div>
-            <div
+            <button
+              onClick={() => setRows((rs) => rs.map((x) => x.name === r.name ? { ...x, on: !x.on } : x))}
               className={`flex h-7 w-12 items-center rounded-full p-1 transition-colors ${
                 r.on ? 'gradient-accent justify-end' : 'bg-border justify-start'
               }`}
             >
               <span className="h-5 w-5 rounded-full bg-white shadow" />
-            </div>
+            </button>
           </div>
         ))}
       </div>
