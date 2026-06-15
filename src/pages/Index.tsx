@@ -95,7 +95,7 @@ const Index = () => {
             </div>
             <div>
               <p className="font-display text-lg font-extrabold leading-none">POS Касса</p>
-              <p className="text-xs text-muted-foreground">Кофейня «Орбита»</p>
+              <p className="text-xs text-muted-foreground">Магазин «Орбита»</p>
             </div>
           </div>
           <nav className="hidden items-center gap-1 rounded-2xl bg-secondary/60 p-1 md:flex">
