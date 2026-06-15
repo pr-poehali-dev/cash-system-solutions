@@ -16,7 +16,7 @@ interface CartItem extends Product {
   qty: number;
 }
 
-const PRODUCTS: Product[] = [
+const INITIAL_PRODUCTS: Product[] = [
   { id: 1, name: 'Капучино', price: 220, emoji: '☕', category: 'Напитки' },
   { id: 2, name: 'Латте', price: 250, emoji: '🥛', category: 'Напитки' },
   { id: 3, name: 'Эспрессо', price: 150, emoji: '⚡', category: 'Напитки' },
@@ -43,15 +43,16 @@ const NAV: { id: Tab; label: string; icon: string }[] = [
 
 const Index = () => {
   const [tab, setTab] = useState<Tab>('pos');
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCat, setActiveCat] = useState('Все');
   const [paid, setPaid] = useState(false);
 
-  const categories = ['Все', ...Array.from(new Set(PRODUCTS.map((p) => p.category)))];
+  const categories = ['Все', ...Array.from(new Set(products.map((p) => p.category)))];
 
   const filtered = useMemo(
-    () => (activeCat === 'Все' ? PRODUCTS : PRODUCTS.filter((p) => p.category === activeCat)),
-    [activeCat]
+    () => (activeCat === 'Все' ? products : products.filter((p) => p.category === activeCat)),
+    [activeCat, products]
   );
 
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -235,8 +236,13 @@ const Index = () => {
           </div>
         )}
 
-        {tab === 'products' && <Products />}
-        {tab === 'settings' && <Settings />}
+        {tab === 'products' && <Products products={products} />}
+        {tab === 'settings' && (
+          <Settings
+            onDeleteAll={() => { setProducts([]); setCart([]); }}
+            onAddProduct={(p) => setProducts((prev) => [...prev, { ...p, id: Date.now() }])}
+          />
+        )}
       </main>
 
       {/* Mobile nav */}
@@ -302,31 +308,44 @@ const Home = ({ onOpenPos }: { onOpenPos: () => void }) => {
   );
 };
 
-const Products = () => (
+const Products = ({ products }: { products: Product[] }) => (
   <div>
     <h1 className="font-display mb-6 text-3xl font-black">Товары</h1>
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {PRODUCTS.map((p, i) => (
-        <div
-          key={p.id}
-          style={{ animationDelay: `${i * 40}ms` }}
-          className="flex animate-float-up items-center gap-4 rounded-3xl border border-border bg-card p-4 shadow-soft"
-        >
-          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-secondary text-3xl">
-            {p.emoji}
-          </span>
-          <div className="flex-1">
-            <p className="font-display font-bold">{p.name}</p>
-            <p className="text-sm text-muted-foreground">{p.category}</p>
+    {products.length === 0 ? (
+      <div className="py-20 text-center text-muted-foreground">
+        <Icon name="Package" className="mx-auto mb-3 opacity-30" size={48} />
+        <p>Товары удалены. Добавьте новые в Настройках.</p>
+      </div>
+    ) : (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {products.map((p, i) => (
+          <div
+            key={p.id}
+            style={{ animationDelay: `${i * 40}ms` }}
+            className="flex animate-float-up items-center gap-4 rounded-3xl border border-border bg-card p-4 shadow-soft"
+          >
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-secondary text-3xl">
+              {p.emoji}
+            </span>
+            <div className="flex-1">
+              <p className="font-display font-bold">{p.name}</p>
+              <p className="text-sm text-muted-foreground">{p.category}</p>
+            </div>
+            <span className="font-display text-lg font-black text-gradient">{p.price} ₽</span>
           </div>
-          <span className="font-display text-lg font-black text-gradient">{p.price} ₽</span>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    )}
   </div>
 );
 
-const Settings = () => {
+const Settings = ({
+  onDeleteAll,
+  onAddProduct,
+}: {
+  onDeleteAll: () => void;
+  onAddProduct: (p: Omit<Product, 'id'>) => void;
+}) => {
   const [rows, setRows] = useState([
     { icon: 'CreditCard', name: 'Эквайринг (карты)', desc: 'Приём оплаты картой', on: true },
     { icon: 'Smartphone', name: 'СБП', desc: 'Система быстрых платежей', on: true },
@@ -336,6 +355,9 @@ const Settings = () => {
   const [callDone, setCallDone] = useState(false);
   const [newPayment, setNewPayment] = useState('');
   const [showNewPayment, setShowNewPayment] = useState(false);
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', emoji: '🛍️', category: '' });
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const callStaff = () => {
     setCallDone(true);
@@ -349,13 +371,25 @@ const Settings = () => {
     setShowNewPayment(false);
   };
 
+  const addProduct = () => {
+    if (!newProduct.name.trim() || !newProduct.price) return;
+    onAddProduct({
+      name: newProduct.name,
+      price: Number(newProduct.price),
+      emoji: newProduct.emoji || '🛍️',
+      category: newProduct.category || 'Прочее',
+    });
+    setNewProduct({ name: '', price: '', emoji: '🛍️', category: '' });
+    setShowNewProduct(false);
+  };
+
   return (
     <div className="max-w-2xl">
       <h1 className="font-display mb-6 text-3xl font-black">Настройки</h1>
 
       {/* Action buttons */}
       <p className="mb-3 text-sm font-semibold text-muted-foreground">Действия</p>
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button
           onClick={callStaff}
           className={`flex items-center gap-3 rounded-2xl border-2 p-4 font-semibold transition-all active:scale-95 ${
@@ -371,7 +405,17 @@ const Settings = () => {
         </button>
 
         <button
-          onClick={() => setShowNewPayment((v) => !v)}
+          onClick={() => { setShowNewProduct((v) => !v); setShowNewPayment(false); }}
+          className="flex items-center gap-3 rounded-2xl border-2 border-yellow-400 bg-white p-4 font-semibold hover:bg-yellow-50 active:scale-95 transition-all"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl gradient-brand">
+            <Icon name="ShoppingBag" className="text-white" size={20} />
+          </span>
+          <span className="text-sm">Создать товар</span>
+        </button>
+
+        <button
+          onClick={() => { setShowNewPayment((v) => !v); setShowNewProduct(false); }}
           className="flex items-center gap-3 rounded-2xl border-2 border-yellow-400 bg-white p-4 font-semibold hover:bg-yellow-50 active:scale-95 transition-all"
         >
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl gradient-brand">
@@ -380,16 +424,81 @@ const Settings = () => {
           <span className="text-sm">Создать тип оплаты</span>
         </button>
 
-        <button
-          onClick={() => {}}
-          className="flex items-center gap-3 rounded-2xl border-2 border-red-300 bg-white p-4 font-semibold hover:bg-red-50 active:scale-95 transition-all text-red-600"
-        >
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500">
-            <Icon name="Trash2" className="text-white" size={20} />
-          </span>
-          <span className="text-sm">Удалить все товары</span>
-        </button>
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center gap-3 rounded-2xl border-2 border-red-300 bg-white p-4 font-semibold hover:bg-red-50 active:scale-95 transition-all text-red-600"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500">
+              <Icon name="Trash2" className="text-white" size={20} />
+            </span>
+            <span className="text-sm">Удалить все товары</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 rounded-2xl border-2 border-red-400 bg-red-50 p-3">
+            <p className="flex-1 text-xs font-semibold text-red-700">Удалить все товары?</p>
+            <button
+              onClick={() => { onDeleteAll(); setConfirmDelete(false); }}
+              className="rounded-xl bg-red-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-600"
+            >
+              Да
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="rounded-xl bg-white px-3 py-1.5 text-xs font-bold border border-border hover:bg-gray-50"
+            >
+              Нет
+            </button>
+          </div>
+        )}
       </div>
+
+      {showNewProduct && (
+        <div className="mb-6 animate-float-up rounded-3xl border border-yellow-300 bg-yellow-50 p-5">
+          <p className="mb-3 text-sm font-bold">Новый товар</p>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              value={newProduct.name}
+              onChange={(e) => setNewProduct((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Название"
+              className="col-span-2 rounded-2xl border border-border bg-white px-4 py-2 text-sm outline-none focus:border-yellow-400"
+            />
+            <input
+              value={newProduct.price}
+              onChange={(e) => setNewProduct((p) => ({ ...p, price: e.target.value }))}
+              placeholder="Цена (₽)"
+              type="number"
+              className="rounded-2xl border border-border bg-white px-4 py-2 text-sm outline-none focus:border-yellow-400"
+            />
+            <input
+              value={newProduct.emoji}
+              onChange={(e) => setNewProduct((p) => ({ ...p, emoji: e.target.value }))}
+              placeholder="Эмодзи"
+              className="rounded-2xl border border-border bg-white px-4 py-2 text-sm outline-none focus:border-yellow-400"
+            />
+            <input
+              value={newProduct.category}
+              onChange={(e) => setNewProduct((p) => ({ ...p, category: e.target.value }))}
+              placeholder="Категория"
+              className="col-span-2 rounded-2xl border border-border bg-white px-4 py-2 text-sm outline-none focus:border-yellow-400"
+            />
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={addProduct}
+              className="rounded-2xl gradient-brand px-5 py-2 text-sm font-bold text-foreground"
+            >
+              Добавить
+            </button>
+            <button
+              onClick={() => setShowNewProduct(false)}
+              className="rounded-2xl border border-border bg-white px-5 py-2 text-sm font-semibold"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
 
       {showNewPayment && (
         <div className="mb-6 animate-float-up rounded-3xl border border-yellow-300 bg-yellow-50 p-4">
